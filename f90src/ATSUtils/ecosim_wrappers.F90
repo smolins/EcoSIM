@@ -47,7 +47,7 @@ subroutine EcoSIM_Setup(properties, state, sizes, num_iterations,&
   use, intrinsic :: iso_c_binding
 
   use BGCContainers_module
-  use ATSCPLMod, only : ATS2EcoSIMData, Init_EcoSIM, EcoSIM2ATSData
+  use ATSCPLMod, only : ATS2EcoSIMData, Init_EcoSIM, EcoSIM2ATSData, EcoSIM2ATSState
 
   implicit none
 
@@ -67,6 +67,9 @@ subroutine EcoSIM_Setup(properties, state, sizes, num_iterations,&
   call ATS2EcoSIMData(num_columns, state, properties, sizes)
 
   call Init_EcoSIM(sizes)
+
+  ! give ATS the initialized internal state so it can be checkpointed
+  call EcoSIM2ATSState(state, sizes)
 
   !call EcoSIM2ATSData(num_columns, state, sizes)
 
@@ -107,7 +110,8 @@ subroutine EcoSIM_Advance( &
 
   use, intrinsic :: iso_c_binding
   use BGCContainers_module
-  use ATSCPLMod, only : Run_EcoSIM_one_step, ATS2EcoSIMData, EcoSIM2ATSData
+  use ATSCPLMod, only : Run_EcoSIM_one_step, ATS2EcoSIMData, EcoSIM2ATSData, &
+       ATS2EcoSIMState, EcoSIM2ATSState
 
   implicit none
 
@@ -122,8 +126,13 @@ subroutine EcoSIM_Advance( &
 
   call ATS2EcoSIMData(num_columns, state, properties, sizes)
 
+  ! restore internal state from ATS (identical unless ATS restarted)
+  call ATS2EcoSIMState(state, sizes)
+
   call Run_EcoSIM_one_step(sizes)
 
   call EcoSIM2ATSData(num_columns, state, sizes)
+
+  call EcoSIM2ATSState(state, sizes)
 
 end subroutine EcoSIM_Advance

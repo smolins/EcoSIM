@@ -141,6 +141,7 @@ module BGCContainers_module
      integer (c_int) :: num_components
      integer (c_int) :: num_columns
      integer (c_int) :: num_pfts
+     integer (c_int) :: num_snow_layers
   end type BGCSizes
 
   type, public, bind(c) :: BGCState
@@ -172,6 +173,25 @@ module BGCContainers_module
      type (BGCVectorDouble) :: evaporation_snow
      type (BGCVectorDouble) :: sublimation_snow
      type (BGCTensorDouble) :: mole_fraction
+     ! EcoSIM internal state carried between advances, checkpointed by ATS.
+     ! Snow layer arrays are num_snow_layers x num_columns.
+     type (BGCMatrixDouble) :: snow_dry_swe
+     type (BGCMatrixDouble) :: snow_liquid
+     type (BGCMatrixDouble) :: snow_ice
+     type (BGCMatrixDouble) :: snow_temperature
+     type (BGCMatrixDouble) :: snow_temperature_c
+     type (BGCMatrixDouble) :: snow_density
+     type (BGCMatrixDouble) :: snow_thickness
+     type (BGCMatrixDouble) :: snow_volume
+     type (BGCMatrixDouble) :: snow_heat_capacity
+     type (BGCMatrixDouble) :: snow_vapor_diffusivity
+     ! num_pfts x num_columns
+     type (BGCMatrixDouble) :: canopy_water_pft
+     ! surface litter (EcoSIM soil layer 0), num_columns
+     type (BGCVectorDouble) :: litter_water
+     type (BGCVectorDouble) :: litter_ice
+     type (BGCVectorDouble) :: litter_temperature
+     type (BGCVectorDouble) :: litter_heat_capacity
   end type BGCState
 
   type, public, bind(c) :: BGCProperties
