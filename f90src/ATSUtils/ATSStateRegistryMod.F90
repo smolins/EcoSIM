@@ -116,12 +116,17 @@ contains
     'water held on the canopy per PFT', WatHeldOnCanopy_pft, 1, npft)
   call add3('canopy_snow', 'SnowOnCanopy_pft', 'm3 d-2', kRolePrivate, &
     'snow water equivalent held on the canopy per PFT', SnowOnCanopy_pft, 1, npft)
-  call add2('canopy_longwave_emission_prev', 'LWRadCanGPrev_col', 'MJ h-1', kRolePrivate, &
-    'canopy longwave emission from the previous step, per column', LWRadCanGPrev_col)
-  call add2('canopy_latent_flux_x_resistance', 'TLEX_col', 'MJ m-1', kRolePrivate, &
-    'latent heat flux x boundary layer resistance, previous step', TLEX_col)
-  call add2('canopy_sensible_flux_x_resistance', 'TSHX_col', 'MJ m-1', kRolePrivate, &
-    'sensible heat flux x boundary layer resistance, previous step', TSHX_col)
+  ! The next three are EcoSIM carry-over values, not fluxes for ATS to use:
+  ! they are what EcoSIM needs from the previous step to start the next one.
+  call add2('canopy_longwave_radiation', 'LWRadCanGPrev_col', 'MJ h-1', kRolePrivate, &
+    'carry-over, not an ATS flux: canopy longwave emission of the previous step, total per grid cell', &
+    LWRadCanGPrev_col)
+  call add2('canopy_latent_heat', 'TLEX_col', 'MJ m-1', kRolePrivate, &
+    'carry-over, not a heat flux: latent heat flux x boundary-layer resistance, summed over previous step', &
+    TLEX_col)
+  call add2('canopy_sensible_heat', 'TSHX_col', 'MJ m-1', kRolePrivate, &
+    'carry-over, not a heat flux: sensible heat flux x boundary-layer resistance, summed over previous step', &
+    TSHX_col)
 
   ! EcoSIM-only outputs (visualized by ATS, not used by ATS physics)
   call add1('transpiration', 'a_Transpiration', 'm3 d-2 h-1', kRoleOutput, &
