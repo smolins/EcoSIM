@@ -33,7 +33,7 @@ contains
   ! BGC coupler variables
   type (BGCState), intent(in) :: state
   type (BGCProperties), intent(in) :: props
-  type (BGCSizes), intent(out) :: sizes
+  type (BGCSizes), intent(in) :: sizes
 
   ! Ecosim variables
   real(r8), pointer :: data(:), nested_ptr(:)
@@ -178,9 +178,6 @@ contains
   call c_f_pointer(props%plant_functional_type%data, data2D, [size_col,num_cols])
   a_PFT = data2D(:,:)
   
-  data_ptr = state%canopy_snow%data
-  call c_f_pointer(data_ptr, data2D, [size_col, num_cols])
-  a_CanSnow=data2D(:,:)
 
   atm_n2 = props%atm_n2
   atm_o2 = props%atm_o2
@@ -218,25 +215,13 @@ contains
   call c_f_pointer(state%snow_depth%data, data, (/num_cols/))
   surf_snow_depth = data(:)
 
-  call c_f_pointer(state%canopy_longwave_radiation%data, data, (/num_cols/))
-  a_LWCan = data(:)
-
-  call c_f_pointer(state%boundary_latent_heat_flux%data, data, (/num_cols/))
-  a_CLHF = data(:)
-
-  call c_f_pointer(state%boundary_sensible_heat_flux%data, data, (/num_cols/))
-  a_CSHF = data(:)
-
-  call c_f_pointer(state%canopy_surface_water%data, data, (/num_cols/))
-  a_CanopyWat = data(:)
-
   end subroutine ATS2EcoSIMData
 !------------------------------------------------------------------------------------------
 
   subroutine EcoSIM2ATSData(ncol, state, sizes)
   implicit none
   type (BGCState), intent(in) :: state
-  type (BGCSizes), intent(out) :: sizes
+  type (BGCSizes), intent(in) :: sizes
 
   real(r8), pointer :: data(:)
   real(r8), pointer :: data2D(:,:)
@@ -258,36 +243,6 @@ contains
   !call c_f_pointer(state%snow_temperature%data, data2D, [(/size_col/),(/num_cols/)])
   !data2D(:,:)=a_TS
 
-  call c_f_pointer(state%canopy_longwave_radiation%data, data, (/num_cols/))
-  data(:) = a_LWCan
-
-  call c_f_pointer(state%boundary_latent_heat_flux%data, data, (/num_cols/))
-  data(:) = a_CLHF
-
-  call c_f_pointer(state%boundary_sensible_heat_flux%data, data, (/num_cols/))
-  data(:) = a_CSHF
-
-  call c_f_pointer(state%canopy_surface_water%data, data, (/num_cols/))
-  data(:) = a_CanopyWat
-
-  call c_f_pointer(state%transpiration%data, data, (/num_cols/))
-  data(:) = a_Transpiration
-
-  call c_f_pointer(state%evaporation_canopy%data, data, (/num_cols/))
-  data(:) = a_EvapCan
-
-  call c_f_pointer(state%evaporation_bare_ground%data, data, (/num_cols/))
-  data(:) = a_EvapGrnd
-
-  call c_f_pointer(state%evaporation_litter%data, data, (/num_cols/))
-  data(:) = a_EvapLitr
-
-  call c_f_pointer(state%evaporation_snow%data, data, (/num_cols/))
-  data(:) = a_EvapSnow
-
-  call c_f_pointer(state%sublimation_snow%data, data, (/num_cols/))
-  data(:) = a_Sublim
-
   call c_f_pointer(state%surface_water_source%data, data, (/num_cols/))
   data(:) = surf_w_source
 
@@ -299,175 +254,8 @@ contains
   call c_f_pointer(state%snow_depth%data, data, (/num_cols/))
   data(:) = surf_snow_depth
 
-  call c_f_pointer(state%canopy_snow%data, data2D, [size_col, num_cols])
-  data2D(:,:) = a_CanSnow
   
   end subroutine EcoSIM2ATSData
-
-!------------------------------------------------------------------------------------------
-
-  subroutine CheckStateSizes(sizes)
-  ! Stop if ATS and EcoSIM disagree on the shape of the restart state
-  use GridConsts, only : JS
-  use abortutils, only : endrun
-  implicit none
-  type (BGCSizes), intent(in) :: sizes
-
-  if (sizes%num_snow_layers /= JS) then
-    write(*,*) "ATS number of snow layers ", sizes%num_snow_layers, " /= EcoSIM JS ", JS
-    call endrun(trim(mod_filename)//' at line', __LINE__)
-  endif
-  end subroutine CheckStateSizes
-
-!------------------------------------------------------------------------------------------
-
-  subroutine ATS2EcoSIMState(state, sizes)
-  ! Restore the EcoSIM state that persists between advances from the copy
-  ! held (and checkpointed) by ATS.
-  use GridConsts,         only : JS, JP
-  use EcosimConst,        only : DENSICE
-  use SnowDataType,       only : VLDrySnoWE_snvr, VLWatSnow_snvr, VLIceSnow_snvr, &
-    TKSnow_snvr, TCSnow_snvr, SnoDens_snvr, SnowThickL_snvr, VLSnoDWIprev_snvr, &
-    VLHeatCapSnow_snvr, VcumDrySnoWE_col, VcumWatSnow_col, VcumIceSnow_col, &
-    VcumSnoDWI_col, VcumSnowWE_col, cumSnowDepz_col
-  use ChemTranspDataType, only : H2OVapDifsc_snvr
-  use SoilWaterDataType,  only : VLWatMicP_vr, VLiceMicP_vr
-  use SoilHeatDataType,   only : TKS_vr, VHeatCapacity_vr
-  use CanopyDataType,     only : WatHeldOnCanopy_pft, LWRadCanGPrev_col
-  use ClimForcDataType,   only : TLEX_col, TSHX_col
-  implicit none
-  type (BGCState), intent(in) :: state
-  type (BGCSizes), intent(in) :: sizes
-
-  real(r8), pointer :: data(:)
-  real(r8), pointer :: data2D(:,:)
-  integer :: num_cols, npft, NY, L
-
-  call CheckStateSizes(sizes)
-  num_cols = sizes%num_columns
-  npft = min(sizes%num_pfts, JP)
-
-  call c_f_pointer(state%snow_dry_swe%data, data2D, [JS, num_cols])
-  VLDrySnoWE_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_liquid%data, data2D, [JS, num_cols])
-  VLWatSnow_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_ice%data, data2D, [JS, num_cols])
-  VLIceSnow_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_temperature%data, data2D, [JS, num_cols])
-  TKSnow_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_temperature_c%data, data2D, [JS, num_cols])
-  TCSnow_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_density%data, data2D, [JS, num_cols])
-  SnoDens_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_thickness%data, data2D, [JS, num_cols])
-  SnowThickL_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_volume%data, data2D, [JS, num_cols])
-  VLSnoDWIprev_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_heat_capacity%data, data2D, [JS, num_cols])
-  VLHeatCapSnow_snvr(1:JS,1:num_cols,1) = data2D
-  call c_f_pointer(state%snow_vapor_diffusivity%data, data2D, [JS, num_cols])
-  H2OVapDifsc_snvr(1:JS,1:num_cols,1) = data2D
-
-  call c_f_pointer(state%canopy_water_pft%data, data2D, [sizes%num_pfts, num_cols])
-  WatHeldOnCanopy_pft(1:npft,1:num_cols,1) = data2D(1:npft,:)
-
-  call c_f_pointer(state%litter_water%data, data, (/num_cols/))
-  VLWatMicP_vr(0,1:num_cols,1) = data
-  call c_f_pointer(state%litter_ice%data, data, (/num_cols/))
-  VLiceMicP_vr(0,1:num_cols,1) = data
-  call c_f_pointer(state%litter_temperature%data, data, (/num_cols/))
-  TKS_vr(0,1:num_cols,1) = data
-  call c_f_pointer(state%litter_heat_capacity%data, data, (/num_cols/))
-  VHeatCapacity_vr(0,1:num_cols,1) = data
-
-  ! values from the previous step that EcoSIM reads at the start of this one
-  call c_f_pointer(state%canopy_longwave_radiation%data, data, (/num_cols/))
-  LWRadCanGPrev_col(1:num_cols,1) = data
-  call c_f_pointer(state%boundary_latent_heat_flux%data, data, (/num_cols/))
-  TLEX_col(1:num_cols,1) = data
-  call c_f_pointer(state%boundary_sensible_heat_flux%data, data, (/num_cols/))
-  TSHX_col(1:num_cols,1) = data
-
-  ! column snow totals, as computed in SnowMassUpdate
-  do NY = 1, num_cols
-    VcumDrySnoWE_col(NY,1) = sum(VLDrySnoWE_snvr(1:JS,NY,1))
-    VcumWatSnow_col(NY,1)  = sum(VLWatSnow_snvr(1:JS,NY,1))
-    VcumIceSnow_col(NY,1)  = sum(VLIceSnow_snvr(1:JS,NY,1))
-    VcumSnoDWI_col(NY,1)   = sum(VLSnoDWIprev_snvr(1:JS,NY,1))
-    VcumSnowWE_col(NY,1)   = VcumDrySnoWE_col(NY,1)+VcumIceSnow_col(NY,1)*DENSICE+VcumWatSnow_col(NY,1)
-    cumSnowDepz_col(0,NY,1) = 0.0_r8
-    do L = 1, JS
-      cumSnowDepz_col(L,NY,1) = cumSnowDepz_col(L-1,NY,1)+SnowThickL_snvr(L,NY,1)
-    enddo
-  enddo
-  end subroutine ATS2EcoSIMState
-
-!------------------------------------------------------------------------------------------
-
-  subroutine EcoSIM2ATSState(state, sizes)
-  ! Copy the EcoSIM state that persists between advances to ATS.
-  use GridConsts,         only : JS, JP
-  use SnowDataType,       only : VLDrySnoWE_snvr, VLWatSnow_snvr, VLIceSnow_snvr, &
-    TKSnow_snvr, TCSnow_snvr, SnoDens_snvr, SnowThickL_snvr, VLSnoDWIprev_snvr, &
-    VLHeatCapSnow_snvr
-  use ChemTranspDataType, only : H2OVapDifsc_snvr
-  use SoilWaterDataType,  only : VLWatMicP_vr, VLiceMicP_vr
-  use SoilHeatDataType,   only : TKS_vr, VHeatCapacity_vr
-  use CanopyDataType,     only : WatHeldOnCanopy_pft, LWRadCanGPrev_col
-  use ClimForcDataType,   only : TLEX_col, TSHX_col
-  implicit none
-  type (BGCState), intent(in) :: state
-  type (BGCSizes), intent(in) :: sizes
-
-  real(r8), pointer :: data(:)
-  real(r8), pointer :: data2D(:,:)
-  integer :: num_cols, npft
-
-  call CheckStateSizes(sizes)
-  num_cols = sizes%num_columns
-  npft = min(sizes%num_pfts, JP)
-
-  call c_f_pointer(state%snow_dry_swe%data, data2D, [JS, num_cols])
-  data2D = VLDrySnoWE_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_liquid%data, data2D, [JS, num_cols])
-  data2D = VLWatSnow_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_ice%data, data2D, [JS, num_cols])
-  data2D = VLIceSnow_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_temperature%data, data2D, [JS, num_cols])
-  data2D = TKSnow_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_temperature_c%data, data2D, [JS, num_cols])
-  data2D = TCSnow_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_density%data, data2D, [JS, num_cols])
-  data2D = SnoDens_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_thickness%data, data2D, [JS, num_cols])
-  data2D = SnowThickL_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_volume%data, data2D, [JS, num_cols])
-  data2D = VLSnoDWIprev_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_heat_capacity%data, data2D, [JS, num_cols])
-  data2D = VLHeatCapSnow_snvr(1:JS,1:num_cols,1)
-  call c_f_pointer(state%snow_vapor_diffusivity%data, data2D, [JS, num_cols])
-  data2D = H2OVapDifsc_snvr(1:JS,1:num_cols,1)
-
-  call c_f_pointer(state%canopy_water_pft%data, data2D, [sizes%num_pfts, num_cols])
-  data2D = 0.0_r8
-  data2D(1:npft,:) = WatHeldOnCanopy_pft(1:npft,1:num_cols,1)
-
-  call c_f_pointer(state%litter_water%data, data, (/num_cols/))
-  data = VLWatMicP_vr(0,1:num_cols,1)
-  call c_f_pointer(state%litter_ice%data, data, (/num_cols/))
-  data = VLiceMicP_vr(0,1:num_cols,1)
-  call c_f_pointer(state%litter_temperature%data, data, (/num_cols/))
-  data = TKS_vr(0,1:num_cols,1)
-  call c_f_pointer(state%litter_heat_capacity%data, data, (/num_cols/))
-  data = VHeatCapacity_vr(0,1:num_cols,1)
-
-  call c_f_pointer(state%canopy_longwave_radiation%data, data, (/num_cols/))
-  data = LWRadCanGPrev_col(1:num_cols,1)
-  call c_f_pointer(state%boundary_latent_heat_flux%data, data, (/num_cols/))
-  data = TLEX_col(1:num_cols,1)
-  call c_f_pointer(state%boundary_sensible_heat_flux%data, data, (/num_cols/))
-  data = TSHX_col(1:num_cols,1)
-  end subroutine EcoSIM2ATSState
 
 !------------------------------------------------------------------------------------------
 

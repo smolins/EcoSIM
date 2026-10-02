@@ -137,12 +137,7 @@ subroutine Init_ATSEcoSIM_driver()
   
   !Pheno vars
   !allocate(LAI_col(ncells_per_col_,ncol))
-  allocate(a_CanSnow(num_pfts,ncol))
   allocate(a_VEG(num_pfts))
-  allocate(a_lwcan(ncol))
-  allocate(a_clhf(ncol))
-  allocate(a_cshf(ncol))
-  allocate(a_canopywat(ncol))
 
   do NY=1,NYS
     do L=1,ncells_per_col_

@@ -320,7 +320,6 @@ implicit none
             CanopyHeight_col(NY,NX) = CanopyHeightLive_pft(NZ,NY,NX)
             tlai_day_pft(NZ,NY,NX) = a_LAI(NY)/num_pfts
             tsai_day_pft(NZ,NY,NX) = a_SAI(NY)/num_pfts
-            SnowOnCanopy_pft(NZ,NY,NX) = a_CanSnow(NZ,NY)
             !iPlantRootProfile_pft(NZ,NY,NX) = 3 !plant type for holding capacity
             TKCanopy_pft(NZ,NY,NX) = TairK_col(NY,NX)
         
@@ -457,16 +456,13 @@ implicit none
     dTexp = surf_e_source(NY)/heat_capacity
     Tfinal = TKsoil1_vr(1,NY,NX) + dTexp 
     
-    surf_w_source(NY) = Qinflx2Soil_col(NY,1)
+    !per grid cell [m3 d-2 h-1] to per area [m h-1]; ATS converts h-1 to s-1
+    surf_w_source(NY) = Qinflx2Soil_col(NY,1) / column_area(NY)
     surf_snow_depth(NY) = SnowDepth_col(NY,1)
     !Now update subsurface flux from roots
     LWRadCanGPrev_col(NY,NX) = LWRadCanG_col(NY,NX)
     TLEX_col(NY,NX)             = Air_Heat_Latent_store_col(NY,NX)
     TSHX_col(NY,NX)             = Air_Heat_Sens_store_col(NY,NX)
-    a_LWCan(NY) = LWRadCanGPrev_col(NY,NX)
-    a_CLHF(NY) = TLEX_col(NY,NX) !Boundary latent heat flux
-    a_CSHF(NY) = TSHX_col(NY,NX) !boundary sensible heat flux
-    a_CanopyWat(NY) = WatHeldOnCanopy_col(NY,NX) !water held on canopy surface
     a_ET(NY) = QVegET_col(NY,NX) !canopy evapotranspiration
 
     !Now that the heat carryover variables are set to the coupler versions
@@ -480,7 +476,6 @@ implicit none
     do NZ=1,num_pfts
       a_Transpiration(NY) = a_Transpiration(NY) + Transpiration_pft(NZ,NY,NX)
       a_EvapCan(NY)  = a_EvapCan(NY) + VapXAir2Canopy_pft(NZ,NY,NX)
-      a_CanSnow(NZ,NY) = SnowOnCanopy_pft(NZ,NY,NX)
     enddo
 
     a_EvapGrnd(NY) = TEvapXAir2Toplay_col(NY,NX) !bare ground evaporation

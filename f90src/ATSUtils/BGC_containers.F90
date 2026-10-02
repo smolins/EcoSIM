@@ -141,7 +141,6 @@ module BGCContainers_module
      integer (c_int) :: num_components
      integer (c_int) :: num_columns
      integer (c_int) :: num_pfts
-     integer (c_int) :: num_snow_layers
   end type BGCSizes
 
   type, public, bind(c) :: BGCState
@@ -158,41 +157,22 @@ module BGCContainers_module
      type (BGCMatrixDouble) :: bulk_density
      type (BGCMatrixDouble) :: subsurface_water_source
      type (BGCMatrixDouble) :: subsurface_energy_source
-     type (BGCMatrixDouble) :: canopy_snow
      type (BGCVectorDouble) :: surface_energy_source
      type (BGCVectorDouble) :: surface_water_source
      type (BGCVectorDouble) :: snow_depth
-     type (BGCVectorDouble) :: canopy_longwave_radiation
-     type (BGCVectorDouble) :: boundary_latent_heat_flux
-     type (BGCVectorDouble) :: boundary_sensible_heat_flux
-     type (BGCVectorDouble) :: canopy_surface_water
-     type (BGCVectorDouble) :: transpiration
-     type (BGCVectorDouble) :: evaporation_canopy
-     type (BGCVectorDouble) :: evaporation_bare_ground
-     type (BGCVectorDouble) :: evaporation_litter
-     type (BGCVectorDouble) :: evaporation_snow
-     type (BGCVectorDouble) :: sublimation_snow
      type (BGCTensorDouble) :: mole_fraction
-     ! EcoSIM internal state carried between advances, checkpointed by ATS.
-     ! Snow layer arrays are num_snow_layers x num_columns.
-     type (BGCMatrixDouble) :: snow_dry_swe
-     type (BGCMatrixDouble) :: snow_liquid
-     type (BGCMatrixDouble) :: snow_ice
-     type (BGCMatrixDouble) :: snow_temperature
-     type (BGCMatrixDouble) :: snow_temperature_c
-     type (BGCMatrixDouble) :: snow_density
-     type (BGCMatrixDouble) :: snow_thickness
-     type (BGCMatrixDouble) :: snow_volume
-     type (BGCMatrixDouble) :: snow_heat_capacity
-     type (BGCMatrixDouble) :: snow_vapor_diffusivity
-     ! num_pfts x num_columns
-     type (BGCMatrixDouble) :: canopy_water_pft
-     ! surface litter (EcoSIM soil layer 0), num_columns
-     type (BGCVectorDouble) :: litter_water
-     type (BGCVectorDouble) :: litter_ice
-     type (BGCVectorDouble) :: litter_temperature
-     type (BGCVectorDouble) :: litter_heat_capacity
   end type BGCState
+
+  ! EcoSIM-private data (carried state and EcoSIM-only outputs), packed by
+  ! ATSStateRegistryMod. ATS stores it without interpreting it; the layout
+  ! (names, sizes, roles) is queried through ecosim_internal_state_entry.
+  type, public, bind(c) :: BGCInternalState
+     integer (c_int) :: layout_version
+     integer (c_int) :: num_entries
+     integer (c_int) :: num_columns
+     integer (c_int) :: values_per_column
+     type (BGCMatrixDouble) :: values   ! values_per_column x num_columns
+  end type BGCInternalState
 
   type, public, bind(c) :: BGCProperties
      type (BGCMatrixDouble) :: liquid_saturation

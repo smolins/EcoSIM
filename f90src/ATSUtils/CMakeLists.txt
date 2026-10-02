@@ -4,6 +4,7 @@ set(ATSUTILS_MOD_SOURCES
   ATSCPLMod.F90
   ATSEcoSIMInitMod.F90
   ATSEcoSIMAdvanceMod.F90
+  ATSStateRegistryMod.F90
   BGC_containers.F90
   c_f_interface_module.F90
   ecosim_wrappers.F90
