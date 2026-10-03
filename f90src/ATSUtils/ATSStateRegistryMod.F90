@@ -132,7 +132,7 @@ contains
   call add1('transpiration', 'a_Transpiration', 'm3 d-2 h-1', kRoleOutput, &
     'transpiration summed over PFTs', a_Transpiration)
   call add1('evaporation_canopy', 'a_EvapCan', 'm2 d-2 h-1', kRoleOutput, &
-    'negative of canopy evaporation summed over PFTs (running total, never reset)', a_EvapCan)
+    'negative of canopy evaporation summed over PFTs, this hour', a_EvapCan)
   call add1('evaporation_ground', 'a_EvapGrnd', 'unannotated', kRoleOutput, &
     'bare ground evaporation (TEvapXAir2Toplay_col)', a_EvapGrnd)
   call add1('evaporation_litter', 'a_EvapLitr', 'unannotated', kRoleOutput, &
@@ -142,7 +142,7 @@ contains
   call add1('sublimation_snow', 'a_Sublim', 'm3 d-2 h-1', kRoleOutput, &
     'sublimation from snow, last substep (EVAPS_col)', a_Sublim)
   call add2('canopy_surface_water', 'WatHeldOnCanopy_col', 'm3 d-2', kRoleOutput, &
-    'water held on the canopy, column total (running total, never reset)', WatHeldOnCanopy_col)
+    'water held on the canopy, column total, this hour', WatHeldOnCanopy_col)
 
   end subroutine DefineEntries
 

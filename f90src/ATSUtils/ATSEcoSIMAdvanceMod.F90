@@ -36,6 +36,8 @@ module ATSEcoSIMAdvanceMod
   use EcoSIMHistMod
   !use PlantAPIData
   use EcoSIMCtrlMod,      only: ldo_sp_mode
+  use EcosimBGCFluxType,  only: Eco_NetRad_col, Eco_Heat_Latent_col, &
+    Eco_Heat_Sens_col, Eco_Heat_GrndSurf_col
 
 
 implicit none
@@ -125,10 +127,30 @@ implicit none
   !NK_col(NX,1) = 14
 
   do NY=1, NYS
-    !ET variable set in SetHourlyDiagnostics unclear if a clone is
-    !needed as with SetHourlyAccumulators
-    QVegET_col(NY,NX) = 0._r8
+    !Hourly reset of the canopy column totals. extracts (ExtractCanopyFluxes)
+    !rebuilds these every hour by adding the per-PFT values to them. Standalone
+    !EcoSIM zeroes them every hour in SetHourlyDiagnostics (Hour1Mod.F90),
+    !which the ATS coupling (prescribed phenology) does not call; without this
+    !block they become running totals. This block replaces that missing reset,
+    !at the same point of the hour (before the canopy radiation and the plant
+    !model). SnowOnCanopy_col is read by the canopy radiation (effective LAI);
+    !the others are diagnostics or outputs. The per-PFT state (e.g.
+    !SnowOnCanopy_pft, WatHeldOnCanopy_pft) is not reset.
+    QVegET_col(NY,NX)            = 0._r8
+    CanopyBiomWater_col(NY,NX)   = 0._r8
+    WatHeldOnCanopy_col(NY,NX)   = 0._r8
+    SnowOnCanopy_col(NY,NX)      = 0._r8
+    VapXAir2Canopy_col(NY,NX)    = 0._r8
+    Eco_NetRad_col(NY,NX)        = 0._r8
+    Eco_Heat_Latent_col(NY,NX)   = 0._r8
+    Eco_Heat_Sens_col(NY,NX)     = 0._r8
+    Eco_Heat_GrndSurf_col(NY,NX) = 0._r8
+    CanopyHeatStor_col(NY,NX)    = 0._r8
+    HeatFlx2Canopy_col(NY,NX)    = 0._r8
+    !outputs summed over PFTs at the end of the advance; zeroed so they hold
+    !this hour's value (a_EvapCan was previously never reset, a running total)
     a_Transpiration(NY) = 0._r8
+    a_EvapCan(NY)       = 0._r8
     call SetHourlyAccumulatorsATS(NY,NX)
     NK_col(NY,NX) = a_NL(NY)
     Myco_pft(1,NY,NX) = 1
