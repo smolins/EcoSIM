@@ -1013,8 +1013,10 @@ module UptakesMod
         cumPRootH2OUptake     = scal*CumWaterPlant2Soil+CumWaterSoil2Plant
         CumPlantHeatLoss2Soil = scal*CumHeatPlant2Soil+CumHeatSoil2Plant        
       else
-        cumPRootH2OUptake     = 0._r8
-        CumPlantHeatLoss2Soil = 0._r8
+        !no release to the soil: the plant receives what it takes from the soil,
+        !so the per-layer uptake (RPlantRootH2OUptk_pvr) and the plant agree
+        cumPRootH2OUptake     = CumWaterSoil2Plant
+        CumPlantHeatLoss2Soil = CumHeatSoil2Plant
       endif
       !
       !     TEST TRANSPIRATION - ROOT WATER UPTAKE VS. CHANGE IN CANOPY
