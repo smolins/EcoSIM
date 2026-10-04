@@ -1,6 +1,6 @@
 program EcoATSTest
   use ATSCPLMod
-  use BGCContainers_module
+  use EcoContainers_module
   use SharedDataMod
   use GridDataType
   use RootDataType
@@ -10,9 +10,9 @@ program EcoATSTest
   implicit none
 
   ! Declare variables
-  type (BGCState) :: state
-  type (BGCProperties) :: props
-  type (BGCSizes) :: sizes
+  type (EcoEnvironment) :: env
+  type (EcoFeedback) :: feedback
+  type (EcoSizes) :: sizes
   integer :: NY, NX, L, ii
   integer :: ncells_per_col_, ncol
   !real, dimension(6) :: rain_array
@@ -53,16 +53,16 @@ end program EcoATSTest
 ! ----------------------------------------------------------------------------
 
 subroutine Init_ATSEcoSIM_driver()
-  use BGCContainers_module
+  use EcoContainers_module
   use SharedDataMod
   use GridDataType
   use CanopyDataType
   implicit none
 
   ! Declare variables
-  type (BGCState) :: state
-  type (BGCProperties) :: props
-  type (BGCSizes) :: sizes
+  type (EcoEnvironment) :: env
+  type (EcoFeedback) :: feedback
+  type (EcoSizes) :: sizes
   integer :: NY, NX, L, NZ
   integer :: ncells_per_col_, ncol
   integer :: kmo,dofmon,ndaysmon

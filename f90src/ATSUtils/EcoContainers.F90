@@ -43,164 +43,141 @@
 !     first member and num_minerals is the third, then they must be in
 !     those positions on both the c and fortran side of the interface!
 !
-!   * The names of the containers and their members should be the same
+!   * The names of the containers and their members are the same
 !     for both c and fortran. The language interface doesn't require
 !     this, but it makes it easier for the reader to understand what is
 !     going on.
 !
+!   * The C side is data/EcoContainers.hh in the ATS EcoSIM PK, which
+!     documents the role of each container. ecosim_container_sizes()
+!     (ecosim_wrappers.F90) reports c_sizeof of these types so ATS can
+!     check them at setup.
+!
 ! **************************************************************************** !
 
-module BGCContainers_module
+module EcoContainers_module
 
   use, intrinsic :: iso_c_binding
 
   implicit none
 
-  integer (c_int), parameter :: kBGCMaxStringLength = 512
-  integer (c_int), parameter :: kBGCMaxWordLength = 32
-
-  integer (c_int), parameter :: kBGCNoError = 0
-  integer (c_int), parameter :: kBGCErrorInvalidEngine = 1
-  integer (c_int), parameter :: kBGCErrorUnknownConstraintName = 2
-  integer (c_int), parameter :: kBGCErrorUnsupportedFunctionality = 3
-  integer (c_int), parameter :: kBGCErrorEngineIntegrity = 4577
-
-  character (13), parameter :: kBGCStringTotalAqueous = 'total_aqueous'
-  character (12), parameter :: kBGCStringTotalSorbed = 'total_sorbed'
-  character (25), parameter :: kBGCStringTotalAqueousPlusSorbed = 'total_aqueous_plus_sorbed'
-  character (4), parameter :: kBGCStringFree = 'free'
-  character (2), parameter :: kBGCStringPH = 'pH'
-  character (7), parameter :: kBGCStringMineral = 'mineral'
-  character (3), parameter :: kBGCStringGas = 'gas'
-  character (6), parameter :: kBGCStringCharge = 'charge'
-
-  type, public, bind(c) :: BGCVectorDouble
+  ! --------------------------------------------------------------------------
+  ! primitive containers; matrices are cells x columns, column-major
+  ! --------------------------------------------------------------------------
+  type, public, bind(c) :: EcoVectorDouble
      integer (c_int) :: size
      integer (c_int) :: capacity
      type (c_ptr) :: data
-  end type BGCVectorDouble
+  end type EcoVectorDouble
 
-  type, public, bind(c) :: BGCVectorInt
+  type, public, bind(c) :: EcoVectorInt
      integer (c_int) :: size
      integer (c_int) :: capacity
      type (c_ptr) :: data
-  end type BGCVectorInt
+  end type EcoVectorInt
 
-  type, public, bind(c) :: BGCVectorString
-     integer (c_int) :: size
-     integer (c_int) :: capacity
+  type, public, bind(c) :: EcoMatrixDouble
+     integer (c_int) :: cells
+     integer (c_int) :: columns
+     integer (c_int) :: capacity_cells
+     integer (c_int) :: capacity_columns
      type (c_ptr) :: data
-  end type BGCVectorString
+  end type EcoMatrixDouble
 
-  type, public, bind(c) :: BGCMatrixDouble
-    integer (c_int) :: rows
-    integer (c_int) :: cols
-    integer (c_int) :: cap_rows
-    integer (c_int) :: cap_cols
-    type (c_ptr) :: data
-  end type BGCMatrixDouble
+  type, public, bind(c) :: EcoMatrixInt
+     integer (c_int) :: cells
+     integer (c_int) :: columns
+     integer (c_int) :: capacity_cells
+     integer (c_int) :: capacity_columns
+     type (c_ptr) :: data
+  end type EcoMatrixInt
 
-  type, public, bind(c) :: BGCMatrixInt
-    integer (c_int) :: rows
-    integer (c_int) :: cols
-    integer (c_int) :: cap_rows
-    integer (c_int) :: cap_cols
-    type (c_ptr) :: data
-  end type BGCMatrixInt
+  type, public, bind(c) :: EcoTensorDouble
+     integer (c_int) :: cells
+     integer (c_int) :: columns
+     integer (c_int) :: components
+     integer (c_int) :: capacity_cells
+     integer (c_int) :: capacity_columns
+     integer (c_int) :: capacity_components
+     type (c_ptr) :: data
+  end type EcoTensorDouble
 
-  type, public, bind(c) :: BGCMatrixString
-    integer (c_int) :: rows
-    integer (c_int) :: cols
-    integer (c_int) :: cap_rows
-    integer (c_int) :: cap_cols
-    type (c_ptr) :: data
-  end type BGCMatrixString
+  type, public, bind(c) :: EcoTensorInt
+     integer (c_int) :: cells
+     integer (c_int) :: columns
+     integer (c_int) :: components
+     integer (c_int) :: capacity_cells
+     integer (c_int) :: capacity_columns
+     integer (c_int) :: capacity_components
+     type (c_ptr) :: data
+  end type EcoTensorInt
 
-  type, public, bind(c) :: BGCTensorDouble
-    integer (c_int) :: rows
-    integer (c_int) :: cols
-    integer (c_int) :: procs
-    integer (c_int) :: cap_rows
-    integer (c_int) :: cap_cols
-    integer (c_int) :: cap_procs
-    type (c_ptr) :: data
-  end type BGCTensorDouble
-
-  type, public, bind(c) :: BGCTensorInt
-    integer (c_int) :: rows
-    integer (c_int) :: cols
-    integer (c_int) :: procs
-    integer (c_int) :: cap_rows
-    integer (c_int) :: cap_cols
-    integer (c_int) :: cap_procs
-    type (c_ptr) :: data
-  end type BGCTensorInt
-
-  type, public, bind(c) :: BGCSizes
+  type, public, bind(c) :: EcoSizes
      integer (c_int) :: ncells_per_col_
      integer (c_int) :: num_components
      integer (c_int) :: num_columns
      integer (c_int) :: num_pfts
-  end type BGCSizes
+  end type EcoSizes
 
-  type, public, bind(c) :: BGCState
-     ! I think I have to write the data as vector doubles
-     type (BGCMatrixDouble) :: liquid_density
-     type (BGCMatrixDouble) :: gas_density
-     type (BGCMatrixDouble) :: ice_density
-     type (BGCMatrixDouble) :: rock_density
-     type (BGCMatrixDouble) :: porosity
-     type (BGCMatrixDouble) :: water_content
-     type (BGCMatrixDouble) :: matric_pressure
-     type (BGCMatrixDouble) :: temperature
-     type (BGCMatrixDouble) :: hydraulic_conductivity
-     type (BGCMatrixDouble) :: bulk_density
-     type (BGCMatrixDouble) :: subsurface_water_source
-     type (BGCMatrixDouble) :: subsurface_energy_source
-     type (BGCVectorDouble) :: surface_energy_source
-     type (BGCVectorDouble) :: surface_water_source
-     type (BGCVectorDouble) :: snow_depth
-     type (BGCTensorDouble) :: mole_fraction
-  end type BGCState
+  ! --------------------------------------------------------------------------
+  ! ATS -> EcoSIM, once at setup: run parameters and flags
+  ! --------------------------------------------------------------------------
+  type, public, bind(c) :: EcoConfig
+     real (c_double) :: heat_capacity
+     real (c_double) :: field_capacity
+     real (c_double) :: wilting_point
+     logical (c_bool) :: p_bool
+     logical (c_bool) :: a_bool
+     logical (c_bool) :: pheno_bool
+     logical (c_bool) :: microbe_bool
+     type (c_ptr) :: pft_file
+  end type EcoConfig
 
-  ! EcoSIM-private data (carried state and EcoSIM-only outputs), packed by
-  ! ATSStateRegistryMod. ATS stores it without interpreting it; the layout
-  ! (names, sizes, roles) is queried through ecosim_internal_state_entry.
-  type, public, bind(c) :: BGCInternalState
-     integer (c_int) :: layout_version
-     integer (c_int) :: num_entries
-     integer (c_int) :: num_columns
-     integer (c_int) :: values_per_column
-     type (BGCMatrixDouble) :: values   ! values_per_column x num_columns
-  end type BGCInternalState
-
-  type, public, bind(c) :: BGCProperties
-     type (BGCMatrixDouble) :: liquid_saturation
-     type (BGCMatrixDouble) :: gas_saturation
-     type (BGCMatrixDouble) :: ice_saturation
-     type (BGCMatrixDouble) :: relative_permeability
-     type (BGCMatrixDouble) :: thermal_conductivity
-     type (BGCMatrixDouble) :: volume
-     type (BGCMatrixDouble) :: depth
-     type (BGCMatrixDouble) :: dz
-     type (BGCMatrixDouble) :: plant_wilting_factor
-     type (BGCMatrixDouble) :: rooting_depth_fraction
-     type (BGCMatrixDouble) :: plant_functional_type
-     type (BGCVectorDouble) :: column_area
-     type (BGCVectorDouble) :: shortwave_radiation
-     type (BGCVectorDouble) :: longwave_radiation
-     type (BGCVectorDouble) :: air_temperature
-     type (BGCVectorDouble) :: vapor_pressure_air
-     type (BGCVectorDouble) :: wind_speed
-     type (BGCVectorDouble) :: precipitation
-     type (BGCVectorDouble) :: precipitation_snow
-     type (BGCVectorDouble) :: elevation
-     type (BGCVectorDouble) :: aspect
-     type (BGCVectorDouble) :: slope
-     type (BGCVectorDouble) :: LAI
-     type (BGCVectorDouble) :: SAI
-     type (BGCVectorDouble) :: vegetation_type
-     type (BGCVectorDouble) :: snow_albedo
+  ! --------------------------------------------------------------------------
+  ! ATS -> EcoSIM, at setup and every advance; never read back
+  ! (members not filled by ATS are marked in data/EcoContainers.hh)
+  ! --------------------------------------------------------------------------
+  type, public, bind(c) :: EcoEnvironment
+     ! per cell: ncells_per_col_ x num_columns
+     type (EcoMatrixDouble) :: liquid_density
+     type (EcoMatrixDouble) :: gas_density
+     type (EcoMatrixDouble) :: ice_density
+     type (EcoMatrixDouble) :: rock_density
+     type (EcoMatrixDouble) :: porosity
+     type (EcoMatrixDouble) :: water_content
+     type (EcoMatrixDouble) :: matric_pressure
+     type (EcoMatrixDouble) :: temperature
+     type (EcoMatrixDouble) :: hydraulic_conductivity
+     type (EcoMatrixDouble) :: bulk_density
+     type (EcoMatrixDouble) :: liquid_saturation
+     type (EcoMatrixDouble) :: gas_saturation
+     type (EcoMatrixDouble) :: ice_saturation
+     type (EcoMatrixDouble) :: relative_permeability
+     type (EcoMatrixDouble) :: thermal_conductivity
+     type (EcoMatrixDouble) :: volume
+     type (EcoMatrixDouble) :: depth
+     type (EcoMatrixDouble) :: dz
+     type (EcoMatrixDouble) :: plant_wilting_factor
+     type (EcoMatrixDouble) :: rooting_depth_fraction
+     type (EcoMatrixDouble) :: plant_functional_type
+     type (EcoTensorDouble) :: mole_fraction
+     ! per column: num_columns
+     type (EcoVectorDouble) :: column_area
+     type (EcoVectorDouble) :: shortwave_radiation
+     type (EcoVectorDouble) :: longwave_radiation
+     type (EcoVectorDouble) :: air_temperature
+     type (EcoVectorDouble) :: vapor_pressure_air
+     type (EcoVectorDouble) :: wind_speed
+     type (EcoVectorDouble) :: precipitation
+     type (EcoVectorDouble) :: precipitation_snow
+     type (EcoVectorDouble) :: elevation
+     type (EcoVectorDouble) :: aspect
+     type (EcoVectorDouble) :: slope
+     type (EcoVectorDouble) :: LAI
+     type (EcoVectorDouble) :: SAI
+     type (EcoVectorDouble) :: vegetation_type
+     type (EcoVectorDouble) :: snow_albedo
+     ! atmosphere composition
      real (c_double) :: atm_n2
      real (c_double) :: atm_o2
      real (c_double) :: atm_co2
@@ -208,21 +185,31 @@ module BGCContainers_module
      real (c_double) :: atm_n2o
      real (c_double) :: atm_h2
      real (c_double) :: atm_nh3
-     real (c_double) :: heat_capacity
-     real (c_double) :: field_capacity
-     real (c_double) :: wilting_point
+     ! clock
      integer (c_int) :: current_day
      integer (c_int) :: current_year
-     logical (c_bool) :: p_bool
-     logical (c_bool) :: a_bool
-     logical (c_bool) :: pheno_bool
-     logical (c_bool) :: microbe_bool
-     type (c_ptr)     :: pft_file
-  end type BGCProperties
+  end type EcoEnvironment
 
-  type, public, bind(c) :: BGCAuxiliaryData
-     type (BGCVectorInt) :: aux_ints
-     type (BGCVectorDouble) :: aux_doubles
-  end type BGCAuxiliaryData
+  ! --------------------------------------------------------------------------
+  ! EcoSIM -> ATS, every advance (snow_depth is also sent in)
+  ! --------------------------------------------------------------------------
+  type, public, bind(c) :: EcoFeedback
+     type (EcoMatrixDouble) :: subsurface_water_source
+     type (EcoMatrixDouble) :: subsurface_energy_source
+     type (EcoVectorDouble) :: surface_water_source
+     type (EcoVectorDouble) :: surface_energy_source
+     type (EcoVectorDouble) :: snow_depth
+  end type EcoFeedback
 
-end module BGCContainers_module
+  ! --------------------------------------------------------------------------
+  ! EcoSIM-private carried state and outputs, stored by ATS (ATSStateRegistryMod)
+  ! --------------------------------------------------------------------------
+  type, public, bind(c) :: EcoInternalState
+     integer (c_int) :: layout_version
+     integer (c_int) :: num_entries
+     integer (c_int) :: num_columns
+     integer (c_int) :: values_per_column
+     type (EcoMatrixDouble) :: values   ! values_per_column x num_columns
+  end type EcoInternalState
+
+end module EcoContainers_module

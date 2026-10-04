@@ -41,27 +41,28 @@ subroutine EcoSIM_DataTest() bind(c)
 
 ! **************************************************************************** !
 
-subroutine EcoSIM_Setup(properties, state, istate, sizes, num_iterations,&
+subroutine EcoSIM_Setup(config, env, feedback, istate, sizes, num_iterations,&
                         num_columns, ncells_per_col_) bind(C)
 
   use, intrinsic :: iso_c_binding
 
-  use BGCContainers_module
+  use EcoContainers_module
   use ATSCPLMod, only : ATS2EcoSIMData, Init_EcoSIM
   use ATSStateRegistryMod, only : PackInternalState
 
   implicit none
 
   ! function parameters
-  type (BGCSizes), intent(in) :: sizes
-  type (BGCState), intent(inout) :: state
-  type (BGCInternalState), intent(inout) :: istate
-  type (BGCProperties), intent(in) :: properties
+  type (EcoConfig), intent(in) :: config
+  type (EcoEnvironment), intent(in) :: env
+  type (EcoFeedback), intent(in) :: feedback
+  type (EcoInternalState), intent(inout) :: istate
+  type (EcoSizes), intent(in) :: sizes
   integer(c_int), VALUE :: num_columns
   integer(c_int), VALUE :: num_iterations
   integer(c_int), VALUE :: ncells_per_col_
 
-  call ATS2EcoSIMData(num_columns, state, properties, sizes)
+  call ATS2EcoSIMData(env, feedback, sizes, config)
 
   call Init_EcoSIM(sizes)
 
@@ -78,18 +79,7 @@ subroutine EcoSIM_Shutdown() bind(C)
   !the data structures
   use, intrinsic :: iso_c_binding
 
-  use BGCContainers_module
-
   implicit none
-
-  ! function parameters
-  !character(kind=c_char), dimension(*), intent(in) :: input_filename
-  !type (BGCSizes), intent(out) :: sizes
-  !type (BGCState), intent(in) :: state
-  !type (BGCAuxiliaryData), intent(in) :: aux_data
-  !type (BGCProperties), intent(in) :: properties
-  !integer :: num_columns, jz, js
-  !integer, intent(in) :: num_iterations
 
 end subroutine EcoSIM_Shutdown
 
@@ -97,15 +87,15 @@ end subroutine EcoSIM_Shutdown
 
 subroutine EcoSIM_Advance( &
      delta_t, &
-     properties, &
-     state, &
+     env, &
+     feedback, &
      istate, &
      sizes, &
      num_iterations, &
      num_columns) bind(C)
 
   use, intrinsic :: iso_c_binding
-  use BGCContainers_module
+  use EcoContainers_module
   use ATSCPLMod, only : Run_EcoSIM_one_step, ATS2EcoSIMData, EcoSIM2ATSData
   use ATSStateRegistryMod, only : PackInternalState, UnpackInternalState
 
@@ -113,21 +103,21 @@ subroutine EcoSIM_Advance( &
 
   ! function parameters
   real (c_double), value, intent(in) :: delta_t
-  type (BGCProperties), intent(in) :: properties
-  type (BGCState), intent(inout) :: state
-  type (BGCInternalState), intent(inout) :: istate
-  type (BGCSizes), intent(in) :: sizes
+  type (EcoEnvironment), intent(in) :: env
+  type (EcoFeedback), intent(in) :: feedback
+  type (EcoInternalState), intent(inout) :: istate
+  type (EcoSizes), intent(in) :: sizes
   integer(c_int), value, intent(in) :: num_iterations
   integer(c_int), value, intent(in) :: num_columns
 
-  call ATS2EcoSIMData(num_columns, state, properties, sizes)
+  call ATS2EcoSIMData(env, feedback, sizes)
 
   ! restore carried state from ATS (identical unless ATS restarted)
   call UnpackInternalState(istate, sizes)
 
   call Run_EcoSIM_one_step(sizes)
 
-  call EcoSIM2ATSData(num_columns, state, sizes)
+  call EcoSIM2ATSData(feedback, sizes)
 
   call PackInternalState(istate, sizes, .true.)
 
@@ -159,11 +149,11 @@ function EcoSIM_Internal_State_Num_Entries(sizes) &
      bind(C, name="ecosim_internal_state_num_entries") result(num_entries)
 
   use, intrinsic :: iso_c_binding
-  use BGCContainers_module, only : BGCSizes
+  use EcoContainers_module, only : EcoSizes
   use ATSStateRegistryMod, only : NumStateEntries
 
   implicit none
-  type (BGCSizes), intent(in) :: sizes
+  type (EcoSizes), intent(in) :: sizes
   integer(c_int) :: num_entries
 
   num_entries = NumStateEntries(sizes)
@@ -178,12 +168,12 @@ subroutine EcoSIM_Internal_State_Entry(i, sizes, ats_name, ecosim_name, units, &
   ! i is 0-based. The character buffers must hold kNameLen, kNameLen,
   ! kUnitsLen and kDescLen characters; they are returned null-terminated.
   use, intrinsic :: iso_c_binding
-  use BGCContainers_module, only : BGCSizes
+  use EcoContainers_module, only : EcoSizes
   use ATSStateRegistryMod, only : GetStateEntry, kNameLen, kUnitsLen, kDescLen
 
   implicit none
   integer(c_int), value, intent(in) :: i
-  type (BGCSizes), intent(in) :: sizes
+  type (EcoSizes), intent(in) :: sizes
   character(kind=c_char), intent(out) :: ats_name(kNameLen), ecosim_name(kNameLen)
   character(kind=c_char), intent(out) :: units(kUnitsLen), description(kDescLen)
   integer(c_int), intent(out) :: ncomp, role
@@ -216,3 +206,39 @@ contains
   end subroutine to_c_string
 
 end subroutine EcoSIM_Internal_State_Entry
+
+! **************************************************************************** !
+!
+! Sizes in bytes of the exchange containers as EcoSIM sees them, so ATS can
+! check them against its C structs (EcoEngine::CheckContainerSizes). Order:
+! EcoVectorDouble, EcoMatrixDouble, EcoTensorDouble, EcoSizes, EcoConfig,
+! EcoEnvironment, EcoFeedback, EcoInternalState. On input n is the number of
+! entries ATS can take; on output, the number EcoSIM knows.
+!
+
+subroutine EcoSIM_Container_Sizes(n, sizes) bind(C, name="ecosim_container_sizes")
+
+  use, intrinsic :: iso_c_binding
+  use EcoContainers_module
+
+  implicit none
+  integer(c_int), intent(inout) :: n
+  integer(c_size_t), intent(out) :: sizes(*)
+
+  integer, parameter :: num_types = 8
+  integer(c_size_t) :: s(num_types)
+  type (EcoVectorDouble) :: vector
+  type (EcoMatrixDouble) :: matrix
+  type (EcoTensorDouble) :: tensor
+  type (EcoSizes) :: esizes
+  type (EcoConfig) :: config
+  type (EcoEnvironment) :: env
+  type (EcoFeedback) :: feedback
+  type (EcoInternalState) :: istate
+
+  s = (/ c_sizeof(vector), c_sizeof(matrix), c_sizeof(tensor), c_sizeof(esizes), &
+         c_sizeof(config), c_sizeof(env), c_sizeof(feedback), c_sizeof(istate) /)
+  sizes(1:min(n, num_types)) = s(1:min(n, num_types))
+  n = num_types
+
+end subroutine EcoSIM_Container_Sizes

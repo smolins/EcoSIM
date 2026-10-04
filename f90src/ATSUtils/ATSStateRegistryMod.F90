@@ -16,7 +16,7 @@ module ATSStateRegistryMod
   !
   use data_kind_mod, only : r8 => DAT_KIND_R8
   use, intrinsic :: iso_c_binding
-  use BGCContainers_module, only : BGCSizes, BGCInternalState
+  use EcoContainers_module, only : EcoSizes, EcoInternalState
   use abortutils, only : endrun
   implicit none
   private
@@ -71,7 +71,7 @@ contains
   use SharedDataMod,      only : a_Transpiration, a_EvapCan, a_EvapGrnd, a_EvapLitr, &
     a_EvapSnow, a_Sublim
   implicit none
-  type(BGCSizes), intent(in) :: sizes
+  type(EcoSizes), intent(in) :: sizes
   logical, intent(in) :: bind
   integer :: npft
 
@@ -217,7 +217,7 @@ contains
 
   integer function NumStateEntries(sizes)
   implicit none
-  type(BGCSizes), intent(in) :: sizes
+  type(EcoSizes), intent(in) :: sizes
 
   call DefineEntries(sizes, .false.)
   NumStateEntries = nentries
@@ -229,7 +229,7 @@ contains
   ! Layout of entry i (1-based)
   implicit none
   integer, intent(in) :: i
-  type(BGCSizes), intent(in) :: sizes
+  type(EcoSizes), intent(in) :: sizes
   character(len=*), intent(out) :: ats_name, ecosim_name, units, description
   integer, intent(out) :: ncomp, role
 
@@ -248,8 +248,8 @@ contains
   subroutine CheckLayout(istate, sizes)
   ! Stop if the container ATS allocated does not match this list
   implicit none
-  type(BGCInternalState), intent(in) :: istate
-  type(BGCSizes), intent(in) :: sizes
+  type(EcoInternalState), intent(in) :: istate
+  type(EcoSizes), intent(in) :: sizes
 
   if (istate%layout_version /= kLayoutVersion .or. istate%num_entries /= nentries .or. &
       istate%values_per_column /= sum(entries(1:nentries)%ncomp) .or. &
@@ -267,8 +267,8 @@ contains
   subroutine PackInternalState(istate, sizes, include_outputs)
   ! EcoSIM -> container. Outputs are skipped at setup, before they are computed.
   implicit none
-  type(BGCInternalState), intent(in) :: istate
-  type(BGCSizes), intent(in) :: sizes
+  type(EcoInternalState), intent(in) :: istate
+  type(EcoSizes), intent(in) :: sizes
   logical, intent(in) :: include_outputs
 
   real(r8), pointer :: v(:,:)
@@ -291,8 +291,8 @@ contains
   subroutine UnpackInternalState(istate, sizes)
   ! container -> EcoSIM, carried state only
   implicit none
-  type(BGCInternalState), intent(in) :: istate
-  type(BGCSizes), intent(in) :: sizes
+  type(EcoInternalState), intent(in) :: istate
+  type(EcoSizes), intent(in) :: sizes
 
   real(r8), pointer :: v(:,:)
   integer :: i, off
