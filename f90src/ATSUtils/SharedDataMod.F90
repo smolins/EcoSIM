@@ -37,8 +37,8 @@ Module SharedDataMod
 !  real(r8), allocatable ::a_CORGR(:,:)   !organic nitrogen  content
   real(r8), allocatable :: a_ASP(:)       !Aspect
   real(r8), allocatable :: a_ALT(:)       !Altitude
-  real(r8), allocatable :: a_LAI(:)       !Leaf Area Index
-  real(r8), allocatable :: a_SAI(:)       !Stem Area Index
+  real(r8), allocatable :: a_LAI(:,:)       !Leaf Area Index
+  real(r8), allocatable :: a_SAI(:,:)       !Stem Area Index
   real(r8), allocatable :: a_VEG(:)       !Vegetation type
   real(r8), allocatable :: a_SALB(:)      !Snow Albedo
   real(r8), allocatable :: a_ATKA(:)
@@ -74,6 +74,7 @@ Module SharedDataMod
   real(r8), allocatable :: surf_e_source(:) !surface energy source
   real(r8), allocatable :: surf_w_source(:) !surface water source
   real(r8), allocatable :: surf_snow_depth(:) !snow depth source
+  real(r8), allocatable :: a_CanSnow(:,:)    !canopy snow per PFT (num_pfts x num_columns)
   !real(r8), allocatable :: a_AREA3(:)
   integer, allocatable :: a_NU(:)        !upper soil layer index
   integer, allocatable :: a_NL(:)        !lower soil layer index

@@ -155,11 +155,17 @@ contains
   call c_f_pointer(env%aspect%data, data, (/num_cols/))
   a_ASP = data(:)
 
-  call c_f_pointer(env%LAI%data, data, (/num_cols/))
-  a_LAI = data(:)
+  !call c_f_pointer(env%LAI%data, data, (/num_cols/))
+  !a_LAI = data(:)
 
-  call c_f_pointer(env%SAI%data, data, (/num_cols/))
-  a_SAI = data(:)
+  call c_f_pointer(env%LAI%data, data2D, [size_col,num_cols])
+  a_LAI = data2D(:,:)
+
+  !call c_f_pointer(env%SAI%data, data, (/num_cols/))
+  !a_SAI = data(:)
+
+  call c_f_pointer(env%SAI%data, data2D, [size_col,num_cols])
+  a_SAI = data2D(:,:)
 
   call c_f_pointer(env%vegetation_type%data, data, (/num_cols/))
   a_VEG = data(:)
@@ -226,6 +232,9 @@ contains
   call c_f_pointer(feedback%snow_depth%data, data, (/num_cols/))
   surf_snow_depth = data(:)
 
+  call c_f_pointer(feedback%canopy_snow%data, data2D, [sizes%num_pfts, num_cols])
+  a_CanSnow = data2D(:,:)
+
   end subroutine CopyFeedbackFromATS
 !------------------------------------------------------------------------------------------
 
@@ -257,6 +266,9 @@ contains
 
   call c_f_pointer(feedback%snow_depth%data, data, (/num_cols/))
   data(:) = surf_snow_depth
+
+  call c_f_pointer(feedback%canopy_snow%data, data2D, [sizes%num_pfts, num_cols])
+  data2D(:,:) = a_CanSnow
 
   end subroutine CopyFeedbackToATS
 
