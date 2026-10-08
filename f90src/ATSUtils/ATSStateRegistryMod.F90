@@ -65,8 +65,8 @@ contains
   use ChemTranspDataType, only : H2OVapDifsc_snvr
   use SoilWaterDataType,  only : VLWatMicP_vr, VLiceMicP_vr
   use SoilHeatDataType,   only : TKS_vr, VHeatCapacity_vr
-  use CanopyDataType,     only : WatHeldOnCanopy_pft, SnowOnCanopy_pft, &
-    LWRadCanGPrev_col, WatHeldOnCanopy_col
+  use CanopyDataType,     only : WatHeldOnCanopy_pft, &
+    LWRadCanGPrev_col, WatHeldOnCanopy_col, Transpiration_pft
   use ClimForcDataType,   only : TLEX_col, TSHX_col
   use SharedDataMod,      only : a_Transpiration, a_EvapCan, a_EvapGrnd, a_EvapLitr, &
     a_EvapSnow, a_Sublim
@@ -114,8 +114,6 @@ contains
     'surface litter (soil layer 0) heat capacity', VHeatCapacity_vr, 0, 1)
   call add3('canopy_water_pft', 'WatHeldOnCanopy_pft', 'm3 d-2', kRolePrivate, &
     'water held on the canopy per PFT', WatHeldOnCanopy_pft, 1, npft)
-  call add3('canopy_snow', 'SnowOnCanopy_pft', 'm3 d-2', kRolePrivate, &
-    'snow water equivalent held on the canopy per PFT', SnowOnCanopy_pft, 1, npft)
   ! The next three are EcoSIM carry-over values, not fluxes for ATS to use:
   ! they are what EcoSIM needs from the previous step to start the next one.
   call add2('canopy_longwave_radiation', 'LWRadCanGPrev_col', 'MJ h-1', kRolePrivate, &
@@ -129,8 +127,10 @@ contains
     TSHX_col)
 
   ! EcoSIM-only outputs (visualized by ATS, not used by ATS physics)
-  call add1('transpiration', 'a_Transpiration', 'm3 d-2 h-1', kRoleOutput, &
-    'transpiration summed over PFTs', a_Transpiration)
+  !call add1('transpiration', 'a_Transpiration', 'm3 d-2 h-1', kRoleOutput, &
+  !  'transpiration summed over PFTs', a_Transpiration)
+  call add3('transpiration', 'Transpiration_pft', 'm3 d-2 h-1', kRoleOutput, &
+    'transpiration of individual PFTs', Transpiration_pft, 1, npft)
   call add1('evaporation_canopy', 'a_EvapCan', 'm2 d-2 h-1', kRoleOutput, &
     'negative of canopy evaporation summed over PFTs, this hour', a_EvapCan)
   call add1('evaporation_ground', 'a_EvapGrnd', 'unannotated', kRoleOutput, &

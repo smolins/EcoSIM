@@ -316,8 +316,8 @@ implicit none
     !Fill in column-wise values needed for prescribed phenology
     !CanopyHeight_col(NY,NX) = 17.0
     !CanopyHeightLive_pft(1,NY,NX) = 17.0
-    tlai_day_pft(1,NY,NX) = a_LAI(NY)
-    tsai_day_pft(1,NY,NX) = a_SAI(NY)
+    !tlai_day_pft(1,NY,NX) = a_LAI(NY)
+    !tsai_day_pft(1,NY,NX) = a_SAI(NY)
     !irootType_col(NY,NX) = a_PFT(NY,1)
     !if(ldo_sp_mode) call PlantCanopyRadsModel(I,J,NY,NX,0.0_r8)
     !Fill number of plants from npfts
@@ -340,8 +340,9 @@ implicit none
         if (a_PFT(NZ,NY) .GT. 0.0) then
             call root_canopy_mapping(a_PFT(NZ,NY), irootType_col(NY,NX), CanopyHeightLive_pft(NZ,NY,NX))
             CanopyHeight_col(NY,NX) = CanopyHeightLive_pft(NZ,NY,NX)
-            tlai_day_pft(NZ,NY,NX) = a_LAI(NY)/num_pfts
-            tsai_day_pft(NZ,NY,NX) = a_SAI(NY)/num_pfts
+            tlai_day_pft(NZ,NY,NX) = a_LAI(NZ,NY)
+            tsai_day_pft(NZ,NY,NX) = a_SAI(NZ,NY)
+            SnowOnCanopy_pft(NZ,NY,NX) = a_CanSnow(NZ,NY)
             !iPlantRootProfile_pft(NZ,NY,NX) = 3 !plant type for holding capacity
             TKCanopy_pft(NZ,NY,NX) = TairK_col(NY,NX)
         
@@ -498,6 +499,7 @@ implicit none
     do NZ=1,num_pfts
       a_Transpiration(NY) = a_Transpiration(NY) + Transpiration_pft(NZ,NY,NX)
       a_EvapCan(NY)  = a_EvapCan(NY) + VapXAir2Canopy_pft(NZ,NY,NX)
+      a_CanSnow(NZ,NY) = SnowOnCanopy_pft(NZ,NY,NX)
     enddo
 
     a_EvapGrnd(NY) = TEvapXAir2Toplay_col(NY,NX) !bare ground evaporation
