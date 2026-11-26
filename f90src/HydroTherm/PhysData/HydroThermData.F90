@@ -37,6 +37,7 @@ implicit none
   real(r8),allocatable ::  ResistAreodynOverSnow_col(:,:)        !  
   real(r8),allocatable :: SurfSensHeatConduct_col(:,:) !sum of active soil/litter/snow sensible conductances over this hour [MJ/K]
   real(r8),allocatable :: SurfLatHeatVapDeriv_col(:,:) !sum of active, water-limited latent-energy derivatives over this hour [MJ m3 ton-1]
+  real(r8),allocatable :: SoilLatHeatTsDeriv_col(:,:)  !d(latent heat into exposed soil)/d(soil surface temperature), summed over this hour's substeps [MJ K-1]
   real(r8),allocatable ::  VLairMicP1_vr(:,:,:)                  ! corrected air-filled micropore volume [m3/d2]
   real(r8),allocatable ::  TKSnow0_snvr(:,:,:)                   !  
   real(r8),allocatable ::  VLWatMacP1_vr(:,:,:)                  !
@@ -96,6 +97,7 @@ implicit none
   allocate(ResistAreodynOverSnow_col(JY,JX));        ResistAreodynOverSnow_col=0._r8  
   allocate(SurfSensHeatConduct_col(JY,JX)); SurfSensHeatConduct_col=0._r8
   allocate(SurfLatHeatVapDeriv_col(JY,JX)); SurfLatHeatVapDeriv_col=0._r8
+  allocate(SoilLatHeatTsDeriv_col(JY,JX)); SoilLatHeatTsDeriv_col=0._r8
   allocate(LWRad2Snow_col(JY,JX));       LWRad2Snow_col=0._r8  
   allocate(VLairMicP1_vr(0:JZ,JY,JX));  VLairMicP1_vr=0._r8  
   allocate(TKSnow0_snvr(JS,JY,JX));      TKSnow0_snvr=0._r8  
@@ -162,6 +164,7 @@ implicit none
   call destroy(ResistAreodynOverSnow_col) 
   call destroy(SurfSensHeatConduct_col)
   call destroy(SurfLatHeatVapDeriv_col)
+  call destroy(SoilLatHeatTsDeriv_col)
   call destroy(LWRad2Snow_col)
   call destroy(VLairMicP1_vr)
   call destroy(TKSnow0_snvr)  

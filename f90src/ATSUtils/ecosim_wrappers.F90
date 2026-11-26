@@ -98,6 +98,9 @@ subroutine EcoSIM_Advance( &
   use EcoContainers_module
   use ATSCPLMod, only : Run_EcoSIM_one_step, ATS2EcoSIMData, EcoSIM2ATSData
   use ATSStateRegistryMod, only : PackInternalState, UnpackInternalState
+  use data_kind_mod, only : r8 => DAT_KIND_R8
+  use SharedDataMod, only : surface_energy_derivative_method, surface_energy_derivative_delta, &
+    surface_temperature_offset, surf_e_source, surf_e_source_dT
 
   implicit none
 
@@ -110,12 +113,43 @@ subroutine EcoSIM_Advance( &
   integer(c_int), value, intent(in) :: num_iterations
   integer(c_int), value, intent(in) :: num_columns
 
+  real(r8), allocatable :: flux_perturbed(:)
+  integer :: NY, nclamp
+
   call ATS2EcoSIMData(env, feedback, sizes)
 
   ! restore carried state from ATS (identical unless ATS restarted)
   call UnpackInternalState(istate, sizes)
 
+  ! d(ground heat flux)/d(surface temperature) by finite difference: a first
+  ! pass with the ATS surface temperature raised by delta, then the start of
+  ! the step is restored exactly as above (the same data from ATS and the same
+  ! carried state, which neither pass has written back yet) and the normal
+  ! pass below runs as without this option.
+  if (surface_energy_derivative_method == 2) then
+    surface_temperature_offset = surface_energy_derivative_delta
+    call Run_EcoSIM_one_step(sizes)
+    flux_perturbed = surf_e_source
+    surface_temperature_offset = 0.0_r8
+    call ATS2EcoSIMData(env, feedback, sizes)
+    call UnpackInternalState(istate, sizes)
+  endif
+
   call Run_EcoSIM_one_step(sizes)
+
+  if (surface_energy_derivative_method == 2) then
+    nclamp = 0
+    do NY = 1, size(surf_e_source)
+      surf_e_source_dT(NY) = (flux_perturbed(NY) - surf_e_source(NY)) / surface_energy_derivative_delta
+      ! a warmer surface must not gain heat: keep the linearization stable
+      if (surf_e_source_dT(NY) > 0.0_r8) then
+        nclamp = nclamp + 1
+        surf_e_source_dT(NY) = 0.0_r8
+      endif
+    enddo
+    if (nclamp > 0) write(*,*) "(EcoSIM) d(ground heat flux)/d(surface temperature) > 0 set to 0 in ", &
+      nclamp, " column(s)"
+  endif
 
   call EcoSIM2ATSData(feedback, sizes)
 

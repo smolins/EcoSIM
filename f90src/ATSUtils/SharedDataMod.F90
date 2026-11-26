@@ -16,6 +16,11 @@ Module SharedDataMod
   real(r8) :: heat_capacity, pressure_at_field_capacity, pressure_at_wilting_point
   real(r8) :: wind_speed_ref_height = 3.0_r8
   real(r8) :: soil_surface_roughness = 0.001_r8
+  ! d(ground heat flux)/d(surface temperature) for a linearized surface energy source
+  ! (EcoConfig): method 0 none, 1 analytic (bare ground), 2 finite difference
+  integer  :: surface_energy_derivative_method = 0
+  real(r8) :: surface_energy_derivative_delta = 0.25_r8   ! [K], method 2
+  real(r8) :: surface_temperature_offset = 0.0_r8         ! [K], added to the ATS surface temperature (finite-difference pass)
   real(r8), allocatable :: a_MFrac(:,:,:)   !molecular fraction
   real(r8), allocatable :: a_csand(:,:)   !sand mass fraction
   real(r8), allocatable :: a_CSILT(:,:)   !silt mass fraction
@@ -77,6 +82,7 @@ Module SharedDataMod
   real(r8), allocatable :: column_area(:)       !column area
   real(r8), allocatable :: vpair(:)       !vapor pressure deficit
   real(r8), allocatable :: surf_e_source(:) !surface energy source
+  real(r8), allocatable :: surf_e_source_dT(:) !d(surf_e_source)/d(surface temperature), per K
   real(r8), allocatable :: surf_w_source(:) !surface water source
   real(r8), allocatable :: surf_snow_depth(:) !snow depth source
   real(r8), allocatable :: a_CanSnow(:,:)    !canopy snow per PFT (num_pfts x num_columns)

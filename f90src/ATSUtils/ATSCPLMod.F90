@@ -60,6 +60,8 @@ contains
   pheno_bool = config%pheno_bool
   wind_speed_ref_height = config%wind_speed_ref_height
   soil_surface_roughness = config%soil_surface_roughness
+  surface_energy_derivative_method = config%surface_energy_derivative_method
+  surface_energy_derivative_delta = config%surface_energy_derivative_delta
 
   end subroutine CopyConfigFromATS
 !------------------------------------------------------------------------------------------
@@ -241,6 +243,9 @@ contains
   call c_f_pointer(feedback%surface_energy_source%data, data, (/num_cols/))
   surf_e_source = data(:)
 
+  call c_f_pointer(feedback%surface_energy_source_dT%data, data, (/num_cols/))
+  surf_e_source_dT = data(:)
+
   call c_f_pointer(feedback%snow_depth%data, data, (/num_cols/))
   surf_snow_depth = data(:)
 
@@ -275,6 +280,9 @@ contains
 
   call c_f_pointer(feedback%surface_energy_source%data, data, (/num_cols/))
   data(:) = surf_e_source
+
+  call c_f_pointer(feedback%surface_energy_source_dT%data, data, (/num_cols/))
+  data(:) = surf_e_source_dT
 
   call c_f_pointer(feedback%snow_depth%data, data, (/num_cols/))
   data(:) = surf_snow_depth

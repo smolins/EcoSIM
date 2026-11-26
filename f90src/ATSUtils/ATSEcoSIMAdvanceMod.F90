@@ -41,6 +41,7 @@ module ATSEcoSIMAdvanceMod
   use ElmIDMod,           only: itrue
   use RedistMod,          only: UpdateCanopyAirDerivatives
   use SurfSoilDataType,   only: HeatSensAir2Surf_col, HeatEvapAir2Surf_col
+  use HydroThermData,     only: SoilLatHeatTsDeriv_col
   use EcoSIMCtrlMod,      only: ldo_sp_mode
   use EcosimBGCFluxType,  only: Eco_NetRad_col, Eco_Heat_Latent_col, &
     Eco_Heat_Sens_col, Eco_Heat_GrndSurf_col
@@ -84,6 +85,7 @@ implicit none
   real(r8) :: HeatInfl2Soil(JY,JX)
   real(r8) :: Qinfl2MacP_col(JY,JX)
   real(r8) :: dLWRaddTKsoi1(JY,JX)
+  real(r8) :: dHGrnddTs_sum(JY)      !longwave+sensible d(ground heat flux)/dTs summed over substeps [MJ K-1 per cell]
   !real(r8) :: SnowDepth_col(JY,JX)
   real(r8) :: PrecAsRain(JY,JX)
   real(r8) :: PrecAsSnow(JY,JX)
@@ -332,9 +334,11 @@ implicit none
     !the ATS surface temperature there instead of the top subsurface cell
     !temperature, which can be much deeper than the surface and does not see the
     !cooling or warming applied to the surface by surf_e_source.
+    !surface_temperature_offset is nonzero only in the perturbed pass that
+    !computes d(ground heat flux)/d(surface temperature) by finite difference
     if(a_TSURF(NY) > 0._r8)then
-      TKSoil1_vr(NU_col(NY,NX),NY,NX) = a_TSURF(NY)
-      TKS_vr(NU_col(NY,NX),NY,NX)     = a_TSURF(NY)
+      TKSoil1_vr(NU_col(NY,NX),NY,NX) = a_TSURF(NY) + surface_temperature_offset
+      TKS_vr(NU_col(NY,NX),NY,NX)     = a_TSURF(NY) + surface_temperature_offset
     endif
 
     !Setting the snow, if passed as total precipitation do full temp calc, else
@@ -495,6 +499,7 @@ implicit none
     Radnet2Grnd_col(NY,NX)=0.0_r8
     LatentHeatEvapAir2Grnd_col(NY,NX)=0.0_r8
     HeatSensVapAir2Grnd_col(NY,NX)=0.0_r8
+    dHGrnddTs_sum(NY)=0.0_r8
   enddo
 
   !Runs the main subcycling for the surface energy and water balance in
@@ -523,6 +528,7 @@ implicit none
       !add them over the substeps to get the hourly snow evaporation/sublimation
       a_EvapSnow(NY)          = a_EvapSnow(NY)+EVAPW_col(NY,NX)
       a_Sublim(NY)            = a_Sublim(NY)+EVAPS_col(NY,NX)
+      dHGrnddTs_sum(NY)       = dHGrnddTs_sum(NY)+dLWRaddTKsoi1(NY,NX)
     enddo
 
     !also update state variables for iteration M
@@ -565,6 +571,17 @@ implicit none
     flux_per_area = (HeatFlx2Grnd_col(NY,1) - cpw*TFice*Qinflx2Soil_col(NY,1)) / column_area(NY)
 
     surf_e_source(NY) = flux_per_area
+
+    !d(surf_e_source)/d(surface temperature), same units per K. Method 1:
+    !analytic, exposed (snow-free) soil only: longwave + sensible (dHGrnddTKsoi1)
+    !plus latent heat (SoilLatHeatTsDeriv_col). Method 2 (finite difference) is
+    !computed by EcoSIM_Advance from two passes; 0 otherwise.
+    if(surface_energy_derivative_method == 1)then
+      surf_e_source_dT(NY) = AMIN1(0._r8, &
+        (dHGrnddTs_sum(NY)+SoilLatHeatTsDeriv_col(NY,NX))/column_area(NY))
+    else
+      surf_e_source_dT(NY) = 0._r8
+    endif
     
     dTexp = surf_e_source(NY)/heat_capacity
     Tfinal = TKsoil1_vr(1,NY,NX) + dTexp 

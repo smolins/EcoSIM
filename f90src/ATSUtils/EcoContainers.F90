@@ -134,6 +134,10 @@ module EcoContainers_module
      logical (c_bool) :: microbe_bool
      real (c_double) :: wind_speed_ref_height
      real (c_double) :: soil_surface_roughness
+     ! d(ground heat flux)/d(surface temperature), for a linearized surface energy source:
+     ! method 0 none, 1 analytic (bare ground), 2 finite difference; delta [K] for method 2
+     real (c_double) :: surface_energy_derivative_delta
+     integer (c_int) :: surface_energy_derivative_method
      type (c_ptr) :: pft_file
   end type EcoConfig
 
@@ -204,6 +208,7 @@ module EcoContainers_module
      type (EcoMatrixDouble) :: subsurface_energy_source
      type (EcoVectorDouble) :: surface_water_source
      type (EcoVectorDouble) :: surface_energy_source
+     type (EcoVectorDouble) :: surface_energy_source_dT   ! d(surface_energy_source)/d(surface T)
      type (EcoVectorDouble) :: snow_depth
      type (EcoMatrixDouble) :: canopy_snow
   end type EcoFeedback

@@ -26,7 +26,7 @@ module ATSStateRegistryMod
 
   integer, parameter, public :: kRolePrivate = 0
   integer, parameter, public :: kRoleOutput = 1
-  integer, parameter, public :: kLayoutVersion = 2
+  integer, parameter, public :: kLayoutVersion = 3   ! 3: canopy-air predictor references added
 
   integer, parameter, public :: kNameLen = 64
   integer, parameter, public :: kUnitsLen = 32
@@ -68,7 +68,9 @@ contains
   use CanopyDataType,     only : WatHeldOnCanopy_pft, &
     LWRadCanGPrev_col, WatHeldOnCanopy_col, PSICanopy_pft, TKC_pft, TKCanopy_pft, &
     ENGYX_pft, DeltaTKC_pft, CanopyBiomWater_pft, Transpiration_pft
-  use ClimForcDataType,   only : TLEX_col, TSHX_col
+  use ClimForcDataType,   only : TLEX_col, TSHX_col, dSensHeatdTKQ_col, TKQHeatRef_col, &
+    dLatHeatdVPQ_col, VPQLatHeatRef_col
+  use PlantTraitDataType, only : CanopyHeightLive_pft
   use SharedDataMod,      only : a_Transpiration, a_EvapCan, a_EvapGrnd, a_EvapLitr, &
     a_EvapSnow, a_Sublim, a_PlantInit
   implicit none
@@ -122,6 +124,10 @@ contains
   ! restarted run from initializing it again)
   call add2('plant_state_initialized', 'a_PlantInit', '-', kRolePrivate, &
     'prescribed phenology: 1 once the plant state below has been initialized', a_PlantInit)
+  ! Read before the traits are reloaded each step (CanopyHeight_col in
+  ! RunEcoSIMSurfaceBalance takes the previous step's value), so it is carried
+  call add3('canopy_height_live_pft', 'CanopyHeightLive_pft', 'm', kRolePrivate, &
+    'live canopy height per PFT, as left by the previous step', CanopyHeightLive_pft, 1, npft)
   call add3('canopy_water_potential', 'PSICanopy_pft', 'MPa', kRolePrivate, &
     'canopy total water potential per PFT', PSICanopy_pft, 1, npft)
   call add3('plant_water', 'CanopyBiomWater_pft', 'm3 d-2', kRolePrivate, &
@@ -145,6 +151,19 @@ contains
   call add2('canopy_sensible_heat', 'TSHX_col', 'MJ m-1', kRolePrivate, &
     'carry-over, not a heat flux: sensible heat flux x boundary-layer resistance, summed over previous step', &
     TSHX_col)
+  ! Canopy-air predictor of the next step (SurfPhysMod: TKQ_col, VPQ_col), set by
+  ! UpdateCanopyAirDerivatives at the end of every step. Standalone EcoSIM saves
+  ! them in its restart file (RestartMod); without them a restarted step, or a
+  ! repeated one (finite-difference d(ground heat flux)/dTs), starts from other
+  ! canopy-air values.
+  call add2('canopy_air_sensible_derivative', 'dSensHeatdTKQ_col', 'MJ m-1 K-1', kRolePrivate, &
+    'carry-over: sensible-heat derivative w.r.t. canopy air temperature, last step', dSensHeatdTKQ_col)
+  call add2('canopy_air_temperature_reference', 'TKQHeatRef_col', 'K', kRolePrivate, &
+    'carry-over: canopy air temperature of the last step (0 = none)', TKQHeatRef_col)
+  call add2('canopy_air_latent_derivative', 'dLatHeatdVPQ_col', 'MJ m2 ton-1', kRolePrivate, &
+    'carry-over: latent-energy derivative w.r.t. canopy air vapor concentration, last step', dLatHeatdVPQ_col)
+  call add2('canopy_air_vapor_reference', 'VPQLatHeatRef_col', 'ton m-3', kRolePrivate, &
+    'carry-over: canopy air vapor concentration of the last step (-1 = none)', VPQLatHeatRef_col)
 
   ! EcoSIM-only outputs (visualized by ATS, not used by ATS physics). Water vapor
   ! terms use EcoSIM's air -> surface sign: <0 = water leaving to the air.

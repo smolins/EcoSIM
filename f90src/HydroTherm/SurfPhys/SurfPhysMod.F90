@@ -175,6 +175,7 @@ contains
       ! hour's unweighted conductance sum from the actual exchange substeps.
       SurfSensHeatConduct_col(NY,NX)=0._r8
       SurfLatHeatVapDeriv_col(NY,NX)=0._r8
+      SoilLatHeatTsDeriv_col(NY,NX)=0._r8
 
     ENDDO D9990
   ENDDO D9995
@@ -648,6 +649,11 @@ contains
   ! local derivative. CdSoiEvap already includes area and substep duration.
   if(CdSoiEvap*(VPQ_col(NY,NX)-VaporSoi1)>-AZMAX1(TopLayWatVol*dts_wat))then
     SurfLatHeatVapDeriv_col(NY,NX)=SurfLatHeatVapDeriv_col(NY,NX)+EvapLHTC*CdSoiEvap
+    !d(latent heat into soil)/d(soil surface temperature), summed over the substeps
+    !(zero on the water-limited branch): -EvapLHTC*CdSoiEvap*dVaporSoi1/dT, with
+    !dln(vapsat)/dT = 5360/T^2 - 1/T and the osmotic/matric factor exp(18*PSISV1/(R*T))
+    SoilLatHeatTsDeriv_col(NY,NX)=SoilLatHeatTsDeriv_col(NY,NX)-EvapLHTC*CdSoiEvap*VaporSoi1 &
+      *(5360.0_r8/TKX1**2-1.0_r8/TKX1-18.0_r8*PSISV1/(RGASC*TKX1**2))
   endif
   !VapXAir2TopLay=0.0
 
